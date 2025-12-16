@@ -34,9 +34,14 @@ bool SteamUserGeneratedContentService::triggerContentDownload() {
     if (!m_currentDownloadState.contains(contentId)) {
       uint32 itemState = SteamUGC()->GetItemState(contentId);
       if (!(itemState & k_EItemStateInstalled) || itemState & k_EItemStateNeedsUpdate) {
-        SteamUGC()->DownloadItem(contentId, true);
-        itemState = SteamUGC()->GetItemState(contentId);
-        m_currentDownloadState[contentId] = !(itemState & k_EItemStateDownloading);
+        // DownloadItem has a return bool if it succeeds in attempting to download.
+        if (SteamUGC()->DownloadItem(contentId, true)) {
+          itemState = SteamUGC()->GetItemState(contentId);
+          m_currentDownloadState[contentId] = !(itemState & k_EItemStateDownloading);
+        } else {
+          // DownloadItem failed for some reason. Just set this to true to skip this item and prevent an infinite loop.
+          m_currentDownloadState[contentId] = true;
+        }
       } else {
         m_currentDownloadState[contentId] = true;
       }
